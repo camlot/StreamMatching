@@ -1,6 +1,8 @@
 package org.rita.lexical;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Stack;
 
 //import com.sun.java.util.*;
@@ -149,101 +151,227 @@ public class REHandler {
 		else
 		{
 			String startState = "", tmpState = "";
-			if(op == '*')
-			{
-				if(data1.length() == 1)  // a*
+			try{
+				if(op == '*')
 				{
-					/*
-					 * Q1->aQ1|ε
-					 */
-					startState = createState();
-					Rule r = new Rule(startState, data1, startState); // aQ1
-					r.addRule("", "");  // ε
-					ruleList.add(r);
+					return createClosure(data1);
 				}
-				else  // Q1* //TODO
-				{
-					
+				else if(op == '.') {
+					return createAnd(data1, data2);
 				}
-			}
-			else if(op == '.') {
-				if(data1.length() == 1 && data2.length() == 1)  // a+b
-				{
-					/*
-					 * Q2->aQ1
-					 * Q1->b
-					 */
-					tmpState = createState();  // Q1
-					startState = createState(); // Q2
-					ruleList.add(new Rule(tmpState, data2, ""));
-					ruleList.add(new Rule(startState, data1, tmpState));
-					
+				else if(op == '|'){ 
+					return createOr(data1, data2);
 				}
-				else if(data1.length() == 1)  // a+Q1
+				else
 				{
-					/*
-					 * Q2->aQ1
-					 */
-					startState = createState();
-					ruleList.add(new Rule(startState, data1, data2));
-				}
-				else if(data2.length() == 1) // Q1+a //TODO
-				{
-					/*
-					 * Q2->Q1a
-					 */
-					
-				}
-				else // Q1+Q2 //TODO
-				{
-					/*
-					 * 
-					 */
+					throw new Exception("Oprator is not legal!");
 				}
 			}
-			else if(op == '|'){ 
-				if(data1.length() == 1 && data2.length() == 1)  // a|b //TODO
-				{
-					
-				}
-				else if(data1.length() == 1)  // a|Q1
-				{
-					/*
-					 * Q1->...|a
-					 */
-					for(Rule r : ruleList)
-					{
-						if(r.getLeft().equals(data2))
-						{
-							r.addRule(data1, "");  // insert rule to Q1
-							startState = r.getLeft();
-							break;
-						}
-					}
-				}
-				else if(data2.length() == 1)  // Q1|a
-				{
-					/*
-					 * Q1->...|a
-					 */
-					for(Rule r : ruleList)
-					{
-						if(r.getLeft().equals(data1))
-						{
-							r.addRule(data2, "");  // insert rule to Q1
-							startState = r.getLeft();
-							break;
-						}
-					}
-				}
-				else // Q1|Q2 //TODO
-				{
-					
-				}
+			catch(Exception e){
+				System.out.println(e);
 			}
-			return startState;
 		}
-
+		return "";
+	}
+	
+	private String createClosure(String data1)
+	{
+		String startState = "";
+		
+		if(data1.length() == 1)  // a*
+		{
+			/*
+			 * Q->aQ|epsilon
+			 */
+			startState = createState();
+			Rule r = new Rule(startState, data1, startState); // aQ
+			r.setIsClousure(true);  // mark current rule is a closure
+			r.addRule("", "");  // epsilon
+			ruleList.add(r);
+		}
+		else  // Q*
+		{
+			for(Rule r : ruleList)
+			{
+				if(r.getLeft().equals(data1)){
+					if(r.isClousure())
+						return data1; // Q** = Q*
+					// TODO
+					else
+					{
+						/* 
+						 * traverse all rule of Q
+						 * a => aQ
+						 * aQ' => expand Q' then add Q behind all the terminator
+						 * add epsilon
+						 */
+						
+					}
+				}
+			}
+		}
+		return startState;
+	}
+	
+	private String createOr(String data1, String data2) throws Exception
+	{
+		String startState = "";
+		if(data1.length() == 1 && data2.length() == 1)  // a|b
+		{
+			/*
+			 * Q1->a|b
+			 */
+			startState = createState();
+			Rule r = new Rule(startState, data1, "");
+			r.addRule(data2, "");
+			ruleList.add(r);
+		}
+		else if(data1.length() == 1 || data2.length() == 1) // a|Q1 or Q1|a
+		{
+			if(data1.length() != 1) // exchange data1 and data2
+			{
+				String tmp = data1;
+				data1 = data2;
+				data2 = tmp;
+			}
+			/*
+			 * Q1->...|a
+			 */
+			for(Rule r : ruleList)
+			{
+				if(r.getLeft().equals(data2))  // get Q1 from ruleList
+				{
+					if(!r.isClousure()){
+						r.addRule(data1, "");  // insert rule to Q1
+						startState = r.getLeft();
+						break;
+					}
+					else{
+						/*
+						 * Q1->cQ1|xxx
+						 * ===>
+						 * Q2->Q1|a => Q2->cQ1|xxx|a
+						 */
+						Rule newr = r.clone();  // clone the old Rule
+						startState = createState();  // Q2
+						newr.setLeft(startState);
+						newr.addRule(data1, "");
+					}
+				}
+			}
+		}
+		else // Q1|Q2  // TODO
+		{
+			Rule r1 = null, r2 = null;
+			// get r from ruleList
+			for(Rule r : ruleList)
+			{
+				if(r.getLeft().equals(data1))
+				{
+					r1 = r;
+				}
+				else if(r.getLeft().equals(data2))
+				{
+					r2 = r;
+				}
+			}
+			if(r1 == null || r2 == null)
+			{
+				throw new Exception("Can not find rule by name");
+			}
+			if(r1.isClousure() && r2.isClousure()) // ()*|()*
+			{
+				
+			}
+			else if(r1.isClousure() || r2.isClousure())
+			{
+				
+			}
+			else{
+				
+			}
+		}
+		return startState;
+	}
+	
+	private String createAnd(String data1, String data2)
+	{
+		String newState = "", startState = "";
+		if(data1.length() == 1 && data2.length() == 1)  // a+b
+		{
+			/*
+			 * Q2->aQ1
+			 * Q1->b
+			 */
+			newState = createState();  // Q1
+			startState = createState(); // Q2
+			ruleList.add(new Rule(newState, data2, ""));
+			ruleList.add(new Rule(startState, data1, newState));
+			
+		}
+		else if(data1.length() == 1)  // a+Q1
+		{
+			/*
+			 * Q2->aQ1
+			 */
+			startState = createState();
+			ruleList.add(new Rule(startState, data1, data2));
+		}
+		else if(data2.length() == 1) // Q1+a //TODO
+		{
+			/*
+			 * Q2->Q1a
+			 * scan Q2 and add 'a' to the back of terminator
+			 * if epsilon exist, change epsilon to 'a'
+			 */
+			
+			
+		}
+		else // Q1+Q2 //TODO
+		{
+			/*
+			 * traverse Q1 then add Q2 behind all the terminator
+			 */
+			try{
+				Rule root = getRuleByName(data1); // Q1
+				String[] s = new String[2];
+				Queue<Rule> ruleQueue = new LinkedList<Rule>();
+				ruleQueue.add(root);
+				while(!ruleQueue.isEmpty())
+				{
+					root = ruleQueue.poll();
+					// traverse current rule
+					while(root.getNextRule(s)){
+						if(s[1].equals(""))  // terminator
+						{
+							root.fixRule(data2);
+						}
+						else
+						{
+							ruleQueue.add(getRuleByName(s[1]));
+						}
+					}
+					ruleQueue.poll();
+				}
+				startState = data1;
+			}catch(Exception e)
+			{
+				System.out.println(e);
+			}
+		}
+		return startState;
+	}
+	
+	private Rule getRuleByName(String name) throws Exception
+	{
+		for(Rule r : ruleList)
+		{
+			if(r.getLeft().equals(name))
+			{
+				return r;
+			}
+		}
+		throw new Exception("Cannot find rule by name");
 	}
 	
 	// Trans the RE into RG

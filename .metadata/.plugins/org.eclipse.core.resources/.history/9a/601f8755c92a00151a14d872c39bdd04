@@ -1,0 +1,82 @@
+package org.rita.lexical;
+
+import java.util.ArrayList;
+
+/*
+ * left -> right1 | right2
+ * left liner grammar
+ * right1 terminator or NULL
+ * right2 state or NULL
+ */
+public class Rule {
+	private String left;
+	private ArrayList<String> right1;
+	private ArrayList<String> right2;
+	boolean closure;  // record whether the rule is trans by a closure or not
+	int currentRule;  // the index of current rule
+	
+	public Rule(String left)
+	{
+		this.left = left;
+	}
+	
+	public Rule(String left, String right1, String right2)
+	{
+		this.left = left;
+		this.right1.add(right1);
+		this.right2.add(right2);
+		this.closure = false;
+	}
+	
+	boolean isClousure()
+	{
+		return this.closure;
+	}
+	
+	void setIsClousure(boolean isClosure)
+	{
+		this.closure = isClosure;
+	}
+	
+	/* 
+	 * get current state name
+	 */
+	public String getLeft()
+	{
+		return this.left;
+	}
+	
+	public void getNextRule(String[] s)
+	{
+		
+	}
+	
+	// add a rule for current state
+	public void addRule(String right1, String right2)
+	{
+		this.right1.add(right1);
+		this.right2.add(right2);
+	}
+	
+	// change a rule
+	public void fixRule(int pos, String right1, String right2)
+	{
+		this.right1.set(pos, right1);
+		this.right2.set(pos, right2);
+	}
+
+	// check if current state has a ε symbol
+	public int existEpsilon()
+	{
+		int pos = 0;
+		for(String tmp : right1)
+		{
+			if(tmp.equals("")){
+				if(right2.get(pos).equals(""))
+					return pos;
+			}
+			++pos;
+		}
+		return -1;
+	}
+}
