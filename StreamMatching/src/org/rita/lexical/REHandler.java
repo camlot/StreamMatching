@@ -182,12 +182,12 @@ public class REHandler {
 		if(data1.length() == 1)  // a*
 		{
 			/*
-			 * Q->aQ|a|epsilon
+			 * Q->aQ|epsilon|a
 			 */
 			startState = createState();
 			Rule r = new Rule(startState, data1, startState); // aQ
 			r.setIsClousure(true);  // mark current rule is a closure
-			//r.addRule(data1, "");  // a
+			r.addRule(data1, "");  // a
 			r.addRule("", "");  // epsilon
 			ruleList.add(r);
 		}
@@ -246,8 +246,7 @@ public class REHandler {
 						}catch(Exception e)
 						{
 							System.out.println(e);
-						}
-						
+						}	
 					}
 				}
 			}
@@ -287,12 +286,13 @@ public class REHandler {
 			{
 				if(r.getLeft().equals(data2))  // get Q1 from ruleList
 				{
-//					if(!r.isClousure()){
+					// if the terminator not exist in the Rule 
+					if(!r.findRuleByRight1(data1)){
 						r.addRule(data1, "");  // insert rule to Q1
 						r.setIsClousure(false);
 						startState = r.getLeft();
 						break;
-//					}
+					}
 //					else{
 //						/*
 //						 * Q1->cQ1|xxx

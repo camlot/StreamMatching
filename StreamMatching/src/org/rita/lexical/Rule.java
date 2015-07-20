@@ -129,6 +129,20 @@ public class Rule implements Cloneable{
 		return -1;
 	}
 	
+	public int findRuleByRight1(String right1)
+	{
+		int i = 0;
+		for(String s : this.right1)
+		{
+			if(s.equals(right1) && right2.get(i).equals(""))
+			{
+				return i;
+			}
+			++i;
+		}
+		return -1;
+	}
+	
 	public void deleteRule()
 	{
 		right1.remove(currentRule);
@@ -139,15 +153,10 @@ public class Rule implements Cloneable{
 	// delete terminator whose right1 equals the arg
 	public void deleteRule(String right1)
 	{
-		int i = 0;
-		for(String s : this.right1)
-		{
-			if(s.equals(right1) && right2.get(i).equals(""))
-			{
-				this.right1.remove(i);
-				this.right2.remove(i);
-			}
-			++i;
+		int i = findRuleByRight1(right1);
+		if(i >= 0){
+			this.right1.remove(i);
+			this.right2.remove(i);
 		}
 	}
 }
