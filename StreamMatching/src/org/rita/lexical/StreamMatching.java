@@ -6,8 +6,8 @@ public class StreamMatching {
 	
 	public static void main(String[] args)
 	{
-		String RE = "ab*c|d(a*|ad)*";
+		String RE = "ab*c";
 		REHandler rehandler = new REHandler(RE);
-		//rehandler.Infix2Postfix();
+		rehandler.printAllRule();
 	}
 }

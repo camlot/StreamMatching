@@ -72,7 +72,7 @@ public class REHandler {
 		case '(': return 1;
 		case '*': return 7;
 		case '|': return 4;
-		case '+': return 2;
+		case '.': return 2;
 		case ')': return 8;
 		}
 		throw new Exception("It's not a verified char!");
@@ -90,7 +90,7 @@ public class REHandler {
 		case '(': return 8;
 		case '*': return 7;
 		case '|': return 5;
-		case '+': return 3;
+		case '.': return 3;
 		case ')': return 1;
 		}
 		throw new Exception("It's not a verified char!");
@@ -112,7 +112,8 @@ public class REHandler {
 				sb.append('.');
 			}			
 		}
-		sb.append(RegularExpression.charAt(RegularExpression.length()-1)+'#');
+		sb.append(RegularExpression.charAt(RegularExpression.length()-1));
+		sb.append('#');
 		String result = sb.toString();
 		return result;
 	}
@@ -150,7 +151,7 @@ public class REHandler {
 		}
 		else
 		{
-			String startState = "", tmpState = "";
+			//String startState = "", tmpState = "";
 			try{
 				if(op == '*')
 				{
@@ -181,16 +182,21 @@ public class REHandler {
 		if(data1.length() == 1)  // a*
 		{
 			/*
-			 * Q->aQ|epsilon
+			 * Q->aQ|a|epsilon
 			 */
 			startState = createState();
 			Rule r = new Rule(startState, data1, startState); // aQ
 			r.setIsClousure(true);  // mark current rule is a closure
+			//r.addRule(data1, "");  // a
 			r.addRule("", "");  // epsilon
 			ruleList.add(r);
 		}
 		else  // Q*
 		{
+			/*
+			 * Q->aB|aQ|a|epsilon
+			 * 
+			 */
 			for(Rule r : ruleList)
 			{
 				if(r.getLeft().equals(data1)){
@@ -203,8 +209,44 @@ public class REHandler {
 						 * traverse all rule of Q
 						 * a => aQ
 						 * aQ' => expand Q' then add Q behind all the terminator
-						 * add epsilon
+						 * add epsilon to Q
 						 */
+						//r = epsilonFree(r);
+						r.setIsClousure(true);
+						try{
+							Rule root = getRuleByName(data1); // Q
+							String[] s = new String[2];
+							Queue<Rule> ruleQueue = new LinkedList<Rule>();
+							ruleQueue.add(root);
+							while(!ruleQueue.isEmpty())
+							{
+								Rule curRule = ruleQueue.poll();
+								//if(curRule.isClousure()) // b*
+								//{ continue; }
+								// traverse current rule
+								while(curRule.getNextRule(s))
+								{
+									if(s[0].equals(""))
+									{
+										curRule.deleteRule(); // delete epsilon rule
+									}
+									else if(s[1].equals(""))  // terminator
+									{
+										curRule.fixRule(data1);  // a => aQ
+									}
+									else
+									{
+										ruleQueue.add(getRuleByName(s[1]));
+									}
+								}
+								ruleQueue.poll();
+							}
+							root.addRule("", "");
+							startState = data1;
+						}catch(Exception e)
+						{
+							System.out.println(e);
+						}
 						
 					}
 				}
@@ -228,12 +270,16 @@ public class REHandler {
 		}
 		else if(data1.length() == 1 || data2.length() == 1) // a|Q1 or Q1|a
 		{
+			/*
+			 * Q1|a
+			 */
 			if(data1.length() != 1) // exchange data1 and data2
 			{
 				String tmp = data1;
 				data1 = data2;
 				data2 = tmp;
 			}
+
 			/*
 			 * Q1->...|a
 			 */
@@ -241,22 +287,23 @@ public class REHandler {
 			{
 				if(r.getLeft().equals(data2))  // get Q1 from ruleList
 				{
-					if(!r.isClousure()){
+//					if(!r.isClousure()){
 						r.addRule(data1, "");  // insert rule to Q1
+						r.setIsClousure(false);
 						startState = r.getLeft();
 						break;
-					}
-					else{
-						/*
-						 * Q1->cQ1|xxx
-						 * ===>
-						 * Q2->Q1|a => Q2->cQ1|xxx|a
-						 */
-						Rule newr = r.clone();  // clone the old Rule
-						startState = createState();  // Q2
-						newr.setLeft(startState);
-						newr.addRule(data1, "");
-					}
+//					}
+//					else{
+//						/*
+//						 * Q1->cQ1|xxx
+//						 * ===>
+//						 * Q2->Q1|a => Q2->cQ1|xxx|a
+//						 */
+//						Rule newr = r.clone();  // clone the old Rule
+//						startState = createState();  // Q2
+//						newr.setLeft(startState);
+//						newr.addRule(data1, "");
+//					}
 				}
 			}
 		}
@@ -279,17 +326,21 @@ public class REHandler {
 			{
 				throw new Exception("Can not find rule by name");
 			}
-			if(r1.isClousure() && r2.isClousure()) // ()*|()*
+			if(r1.existEpsilon())
 			{
 				
 			}
-			else if(r1.isClousure() || r2.isClousure())
-			{
-				
-			}
-			else{
-				
-			}
+//			if(r1.isClousure() && r2.isClousure()) // ()*|()*
+//			{
+//				
+//			}
+//			else if(r1.isClousure() || r2.isClousure())
+//			{
+//				
+//			}
+//			else{
+//				
+//			}
 		}
 		return startState;
 	}
@@ -307,7 +358,6 @@ public class REHandler {
 			startState = createState(); // Q2
 			ruleList.add(new Rule(newState, data2, ""));
 			ruleList.add(new Rule(startState, data1, newState));
-			
 		}
 		else if(data1.length() == 1)  // a+Q1
 		{
@@ -324,7 +374,21 @@ public class REHandler {
 			 * scan Q2 and add 'a' to the back of terminator
 			 * if epsilon exist, change epsilon to 'a'
 			 */
-			
+			try{
+				Rule r = getRuleByName(data1);
+				if (r.isClousure()) {
+					// r.deleteRule(data1);  
+					int pos = r.existEpsilon();
+					r.fixRule(pos, data2, "");  // epsilon => terminator
+					r.setIsClousure(false);
+				}
+				else{
+					
+				}
+			}catch(Exception e)
+			{
+				System.out.println(e);
+			}
 			
 		}
 		else // Q1+Q2 //TODO
@@ -362,6 +426,13 @@ public class REHandler {
 		return startState;
 	}
 	
+	
+	// change current grammar into epsilon free
+//	private Rule epsilonFree(Rule ruleName)
+//	{
+//			
+//	}
+	
 	private Rule getRuleByName(String name) throws Exception
 	{
 		for(Rule r : ruleList)
@@ -383,13 +454,13 @@ public class REHandler {
 		String re = addJoinOP();
 		char currentChar = '\0';
 		int currentPos = 0;
-		while(currentPos != re.length());
+		while(currentPos != re.length())
 		{
 			currentChar = re.charAt(currentPos); // get next char
+			String tmp = "";
+			tmp += currentChar;
 			if(!isSymbol(currentChar)) // current char is terminator
 			{
-				String tmp = "";
-				tmp += currentChar;
 				OPND.push(tmp); // push the char into OPND stack
 				++currentPos;
 			}
@@ -401,12 +472,12 @@ public class REHandler {
 					int value = compare(op1, currentChar);
 					if(value == 0) // op1 < op2
 					{
-						OPND.push(s); // push the char into OPND stack
+						OPNR.push(tmp); // push the symbol into OPNR stack
 						++currentPos;
 					}
 					else if(value == 1) // op1 = op2
 					{
-						OPND.pop();  // pop'('
+						OPNR.pop();  // pop'('
 						++currentPos;
 					}
 					else if(value == 2) // op1 > op2
@@ -430,6 +501,26 @@ public class REHandler {
 			}
 		}
 		
+	}
+	
+	/*
+	 * print RG was being translated by RE
+	 */
+	public void printAllRule()
+	{
+		createRules();
+		for(int i=0; i < ruleList.size(); ++i)
+		{
+			Rule r = ruleList.get(i);
+			System.out.print(r.getLeft()+"->");
+			for(int j = 0; j < r.size(); ++j)
+			{
+				String [] s = new String[2];
+				r.get(s, j);
+				System.out.print(s[0]+s[1]+"|");
+			}
+			
+		}
 	}
 	
 	/*

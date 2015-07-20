@@ -31,14 +31,31 @@ public class Rule implements Cloneable{
 		this.currentRule = 0;
 	}
 	
-	 public Rule clone() {    
-	        try {    
-	            return (Rule)super.clone();    
-	        } catch (CloneNotSupportedException e) {    
-	            return null;    
-	        }    
-	    }    
+	public Rule clone() 
+	{
+		try{
+			return (Rule)super.clone();
+		}
+		catch(CloneNotSupportedException e){
+			return null;
+		}
+	}    
 
+	public int size()
+	{
+		return right1.size();
+	}
+	
+	public boolean get(String[] s, int index)
+	{
+		if(index < right1.size())
+		{
+			s[0] = right1.get(index);
+			s[1] = right2.get(index);
+			return true;
+		}
+		return false;
+	}
 	
 	public void resetIndex()
 	{
@@ -110,5 +127,27 @@ public class Rule implements Cloneable{
 			++pos;
 		}
 		return -1;
+	}
+	
+	public void deleteRule()
+	{
+		right1.remove(currentRule);
+		right2.remove(currentRule);
+		currentRule--;
+	}
+	
+	// delete terminator whose right1 equals the arg
+	public void deleteRule(String right1)
+	{
+		int i = 0;
+		for(String s : this.right1)
+		{
+			if(s.equals(right1) && right2.get(i).equals(""))
+			{
+				this.right1.remove(i);
+				this.right2.remove(i);
+			}
+			++i;
+		}
 	}
 }
